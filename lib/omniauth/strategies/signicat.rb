@@ -74,12 +74,17 @@ module OmniAuth
 
       def verify_signature!(xml)
         key = extract_public_key(xml)
+        begin
+          signed_info = extract_signed_info(xml)
+          signature = extract_signature(xml)
+          return if key.verify(OpenSSL::Digest::SHA1.new, signature, signed_info)
 
-        signed_info = extract_signed_info(xml)
-        signature = extract_signature(xml)
-        return if key.verify(OpenSSL::Digest::SHA1.new, signature, signed_info)
+          raise OmniAuth::Strategies::Signicat::ValidationError, 'Invalid signature (SHA1)'
+        rescue OmniAuth::Strategies::Signicat::ValidationError
+          return if key.verify(OpenSSL::Digest::SHA256.new, signature, signed_info)
 
-        raise OmniAuth::Strategies::Signicat::ValidationError, 'Invalid signature'
+          raise OmniAuth::Strategies::Signicat::ValidationError, 'Invalid signature (SHA256)'
+        end
       end
 
       def extract_public_key(xml)
